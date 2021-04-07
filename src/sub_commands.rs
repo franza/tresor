@@ -1,7 +1,18 @@
+use crate::crypto::*;
 
-// Initiates public and private keys and asks the pathphrase
+// Initiates public and private keys and asks the passphrase
 pub fn call_init() {
-    println!("Called init")
+    println!("Called init");
+    let passphrase = "123";
+    let cry = Crypto::init(passphrase).unwrap();
+
+    let data = "secret data";
+    let encrypted = cry.encrypt(data.as_bytes()).unwrap();
+
+    println!("encrypted {:?}", encrypted);
+
+    let decrypted = cry.decrypt(encrypted.as_slice()).unwrap();
+    println!("decrypted {}", String::from_utf8(Vec::from(decrypted)).unwrap())
 }
 
 // Stores the value in DB

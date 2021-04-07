@@ -1,9 +1,9 @@
-mod sub_commands;
+extern crate tresor;
 
 use std::fs;
+use tresor::sub_commands;
 
 use clap::{App, SubCommand, Arg, ArgMatches};
-use openssl::rsa::{Rsa, Padding};
 
 fn main() {
     let bucket_arg = Arg::with_name("bucket").index(1).required(true);
