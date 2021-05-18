@@ -1,23 +1,26 @@
-use crate::crypto::*;
+use std::io;
+
+use crate::crypto;
 
 // Initiates public and private keys and asks the passphrase
 pub fn call_init() {
-    println!("Called init");
-    let passphrase = "123";
-    let cry = Crypto::init(passphrase).unwrap();
 
-    let data = "secret data";
-    let encrypted = cry.encrypt(data.as_bytes()).unwrap();
-
-    println!("encrypted {:?}", encrypted);
-
-    let decrypted = cry.decrypt(encrypted.as_slice()).unwrap();
-    println!("decrypted {}", String::from_utf8(Vec::from(decrypted)).unwrap())
 }
 
 // Stores the value in DB
 pub fn call_store(bucket: &str, key: &str, value: &str) {
-    println!("Called store with bucket {}, key {} and value {}", bucket, key, value)
+    let secret = {
+        let mut secret = String::new();
+        println!("Enter the password");
+        io::stdin().read_line(&mut secret).expect("Failed to read the password");
+        secret
+    };
+
+    // use it as nonce - not sure if it's legal
+    let nonce = format!("{}_{}", bucket, key);
+
+    let ciphertext = crypto::encrypt(&secret, &nonce, &value).unwrap();
+    print!("Encrypted {} to {}", value, ciphertext);
 }
 
 // Retrieves the value from safe storage and prints
