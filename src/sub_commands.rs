@@ -4,7 +4,7 @@ use crate::crypto;
 
 // Initiates public and private keys and asks the passphrase
 pub fn call_init() {
-
+    
 }
 
 // Stores the value in DB
