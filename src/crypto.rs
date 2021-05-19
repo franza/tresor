@@ -5,21 +5,32 @@ use std::fmt;
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use aes_gcm::aead::{Aead, NewAead};
 use std::cmp::Ordering;
+use std::string::FromUtf8Error;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum Error {
-    EncryptionError,
-    DecryptionError,
-    KeyError(String),
-}
+#[derive(Debug)]
+pub struct Error(String);
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::EncryptionError => f.write_str("Encryption error"),
-            Error::DecryptionError => f.write_str("Decryption error"),
-            Error::KeyError(message) => f.write_str(format!("Invalid key error: {}", message).as_str()),
-        }
+        f.write_str(self.0.as_str())
+    }
+}
+
+impl From<base64::DecodeError> for Error {
+    fn from(err: base64::DecodeError) -> Self {
+        Error(err.to_string())
+    }
+}
+
+impl From<aes_gcm::Error> for Error {
+    fn from(err: aes_gcm::Error) -> Self {
+        Error(err.to_string())
+    }
+}
+
+impl From<FromUtf8Error> for Error {
+    fn from(err: FromUtf8Error) -> Self {
+        Error(err.to_string())
     }
 }
 
@@ -34,7 +45,7 @@ pub fn encrypt(secret: &str, salt: &str, plaintext: &str) -> Result<String, Erro
     cipher
         .encrypt(nonce, plaintext.as_bytes())
         .map(base64::encode)
-        .map_err(|_| Error::EncryptionError)
+        .map_err(Error::from)
 }
 
 pub fn decrypt(secret: &str, salt: &str, ciphertext: &str) -> Result<String, Error> {
@@ -45,12 +56,10 @@ pub fn decrypt(secret: &str, salt: &str, ciphertext: &str) -> Result<String, Err
     let aligned_salt = align(salt, NONCE_MASK, true)?;
     let nonce = Nonce::from_slice(aligned_salt.as_bytes());
 
-    fn dec_err<T, R>(_: T) -> Result<R, Error> { Err(Error::DecryptionError) }
-
-    let decoded = base64::decode(ciphertext).or_else(dec_err)?;
+    let decoded = base64::decode(ciphertext)?;
     let decoded = decoded.as_slice();
-    let plain_bytes = cipher.decrypt(nonce, decoded).or_else(dec_err)?;
-    String::from_utf8(plain_bytes).or_else(dec_err)
+    let plain_bytes = cipher.decrypt(nonce, decoded)?;
+    String::from_utf8(plain_bytes).map_err(Error::from)
 }
 
 const NONCE_MASK: &str = "111111111111";
@@ -70,7 +79,7 @@ fn align(val: &str, mask: &str, truncate: bool) -> Result<String, Error> {
         },
         Ordering::Greater => {
             let message = format!("length must be less than {} characters", mask.len());
-            Err(Error::KeyError(message))
+            Err(Error(message))
         }
     }
 }
