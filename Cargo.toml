@@ -14,3 +14,6 @@ base64 = "0.13.0"
 [dependencies.rusqlite]
 version = "0.25.3"
 features = ["bundled"]
+
+[dev-dependencies]
+serial_test = "*"
