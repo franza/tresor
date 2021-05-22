@@ -16,7 +16,7 @@ impl fmt::Display for Error {
 }
 
 pub trait Storage<T> {
-    fn lookup(&self, bucket: &str, key: &str) -> Result<T, Error>;
+    fn lookup(&self, bucket: &str, key: &str) -> Result<Option<T>, Error>;
     fn store(&self, bucket: &str, key: &str, value: &str) -> Result<(), Error>;
     fn delete(&self, bucket: &str, key: &str) -> Result<(), Error>;
 }
@@ -81,14 +81,17 @@ pub mod sqlite {
     }
 
     impl Storage<Entry> for SqliteStorage {
-        fn lookup(&self, bucket: &str, key: &str) -> Result<Entry, Error> {
+        fn lookup(&self, bucket: &str, key: &str) -> Result<Option<Entry>, Error> {
             let mut stmt = self.conn.prepare(
                 "select * from entries where bucket = ?1 and key = ?2"
             )?;
 
             let mut rows = stmt.query(params![bucket, key])?;
-            let row = rows.next()?.ok_or(Error::entry_not_found())?;
-            Entry::from_row(row)
+            let row = rows.next()?;
+            match row {
+                Some(row) => Entry::from_row(row).map(Some),
+                None => Ok(None),
+            }
         }
 
         fn store(&self, bucket: &str, key: &str, value: &str) -> Result<(), Error> {

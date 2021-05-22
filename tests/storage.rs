@@ -21,7 +21,7 @@ fn lookup_nothing() {
     let storage = sqlite::setup("test.db").unwrap();
     let result = storage.lookup("undefined", "undefined");
 
-    assert!(matches!(result, Err(_)));
+    assert!(matches!(result, Ok(None)));
 
     teardown();
 }
@@ -50,9 +50,9 @@ fn lookup_entry() {
     storage.store(bucket, key, value).unwrap();
     let result = storage.lookup(bucket, key);
 
-    assert!(matches!(result, Ok(_)));
+    assert!(matches!(result, Ok(Some(_))));
 
-    let entry = result.unwrap();
+    let entry = result.unwrap().unwrap();
 
     assert_eq!(entry.bucket, bucket.to_string());
     assert_eq!(entry.key, key.to_string());
@@ -72,13 +72,13 @@ fn update_entry() {
     let key = "k";
     let value1 = "v1";
     storage.store(bucket, key, value1).unwrap();
-    let entry = storage.lookup(bucket, key).unwrap();
+    let entry = storage.lookup(bucket, key).unwrap().unwrap();
 
     assert_eq!(entry.modified_on, None);
 
     let value2 = "v2";
     storage.store(bucket, key, value2).unwrap();
-    let entry = storage.lookup(bucket, key).unwrap();
+    let entry = storage.lookup(bucket, key).unwrap().unwrap();
 
     assert_eq!(entry.value, value2.to_string());
     assert!(matches!(entry.modified_on, Some(_)));
