@@ -2,7 +2,7 @@ extern crate tresor;
 
 use clap::{App, Arg, SubCommand};
 
-use tresor::sub_commands;
+mod sub_commands;
 
 fn main() {
     let bucket_arg = Arg::with_name("bucket").index(1).required(true);
@@ -27,7 +27,7 @@ fn main() {
 
     let matches = app.get_matches();
 
-    match matches.subcommand() {
+    let command_result = match matches.subcommand() {
         ("init", _) => sub_commands::call_init(),
         ("store", Some(sub_m)) => sub_commands::call_store(
             sub_m.value_of("bucket").expect("Missing argument 'bucket'"),
@@ -42,6 +42,8 @@ fn main() {
             sub_m.value_of("bucket").expect("Missing argument 'bucket'"),
             sub_m.value_of("key").expect("Missing argument 'key'"),
         ),
-        (s, _) => println!("Unknown command {}", s)
-    }
+        (s, _) => Ok(println!("Unknown command {}", s))
+    };
+
+    command_result.unwrap_or_else(|err| println!("{}", err))
 }

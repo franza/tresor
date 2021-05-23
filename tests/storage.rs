@@ -1,4 +1,4 @@
-use tresor::storage::{Storage, Error};
+use tresor::storage::{Storage, Error, Entry};
 use tresor::storage::sqlite;
 use tresor::storage::sqlite::*;
 
@@ -32,7 +32,7 @@ fn insert_entry() {
     setup();
 
     let storage = sqlite::setup("test.db").unwrap();
-    let result = storage.store("b", "k", "v");
+    let result = storage.store(Entry::new("b", "k", "v"));
 
     assert_eq!(result, Ok(()));
     teardown();
@@ -44,20 +44,17 @@ fn lookup_entry() {
     setup();
 
     let storage = sqlite::setup("test.db").unwrap();
-    let bucket = "b";
-    let key = "k";
-    let value = "v";
-    storage.store(bucket, key, value).unwrap();
-    let result = storage.lookup(bucket, key);
+    let stored_entry = Entry::new("b", "k", "v");
+    storage.store(stored_entry).unwrap();
+    let result = storage.lookup("b", "k");
 
     assert!(matches!(result, Ok(Some(_))));
 
     let entry = result.unwrap().unwrap();
 
-    assert_eq!(entry.bucket, bucket.to_string());
-    assert_eq!(entry.key, key.to_string());
-    assert_eq!(entry.value, value.to_string());
-    assert_eq!(entry.modified_on, None);
+    assert_eq!(entry.bucket, "b");
+    assert_eq!(entry.key, "k");
+    assert_eq!(entry.value, "v");
 
     teardown();
 }
@@ -68,20 +65,16 @@ fn update_entry() {
     setup();
 
     let storage = sqlite::setup("test.db").unwrap();
-    let bucket = "b";
-    let key = "k";
-    let value1 = "v1";
-    storage.store(bucket, key, value1).unwrap();
-    let entry = storage.lookup(bucket, key).unwrap().unwrap();
+    let entry1 = Entry::new("b", "k", "v1");
+    storage.store(entry1).unwrap();
 
-    assert_eq!(entry.modified_on, None);
+    let entry2 = Entry::new("b", "k", "v2");
+    let created_on = entry2.created_on;
+    storage.store(entry2).unwrap();
+    let entry = storage.lookup("b", "k").unwrap().unwrap();
 
-    let value2 = "v2";
-    storage.store(bucket, key, value2).unwrap();
-    let entry = storage.lookup(bucket, key).unwrap().unwrap();
-
-    assert_eq!(entry.value, value2.to_string());
-    assert!(matches!(entry.modified_on, Some(_)));
+    assert_eq!(entry.value, "v2".to_string());
+    assert_eq!(entry.created_on, created_on);
 
     teardown();
 }
@@ -106,12 +99,9 @@ fn delete_entry() {
     setup();
 
     let storage = sqlite::setup("test.db").unwrap();
-    let bucket = "b";
-    let key = "k";
-    let value1 = "v1";
-    storage.store(bucket, key, value1).unwrap();
+    storage.store(Entry::new("b", "k", "v1")).unwrap();
 
-    let result = storage.delete(bucket, key);
+    let result = storage.delete("b", "k");
 
     assert!(matches!(result, Ok(_)));
     teardown();

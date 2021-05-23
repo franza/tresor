@@ -10,6 +10,7 @@ edition = "2018"
 clap = "2.33.3"
 aes-gcm = "0.9.1"
 base64 = "0.13.0"
+rpassword = "5.0"
 
 [dependencies.rusqlite]
 version = "0.25.3"
