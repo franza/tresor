@@ -1,11 +1,11 @@
 extern crate base64;
 
+use std::cmp::Ordering;
 use std::fmt;
+use std::string::FromUtf8Error;
 
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use aes_gcm::aead::{Aead, NewAead};
-use std::cmp::Ordering;
-use std::string::FromUtf8Error;
 
 #[derive(Debug)]
 pub struct Error(String);
@@ -71,12 +71,12 @@ fn align(val: &str, mask: &str, truncate: bool) -> Result<String, Error> {
         Ordering::Less => {
             let (_, rest) = mask.split_at(val.len());
             Ok(format!("{}{}", val, rest))
-        },
+        }
         Ordering::Greater if truncate => {
             let mut result = String::from(val);
             result.truncate(mask.len());
             Ok(result)
-        },
+        }
         Ordering::Greater => {
             let message = format!("length must be less than {} characters", mask.len());
             Err(Error(message))
@@ -86,8 +86,9 @@ fn align(val: &str, mask: &str, truncate: bool) -> Result<String, Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::crypto::{encrypt, decrypt, Error};
     use std::matches;
+
+    use crate::crypto::{decrypt, encrypt, Error};
 
     #[test]
     fn encrypt_works() {

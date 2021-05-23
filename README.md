@@ -37,7 +37,7 @@ supersecretpassword
 # Entering incorrect password will cause an error!
 
 $ tresor store browserpasswords facebook completelydifferentpassword
-Bucket browserpasswords already contains key facebook with a value. Enter the password which was used to encrypt it in order to overwrite: 
+Bucket "browserpasswords" already contains key "facebook" with a value. Enter the password which was used to encrypt it in order to overwrite: 
 Failed to decrypt the data
 
 # Let's try again but with correct password

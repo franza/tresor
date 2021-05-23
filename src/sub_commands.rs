@@ -1,9 +1,10 @@
+use std::fmt;
+use std::fmt::Formatter;
+
 use tresor::crypto;
 use tresor::storage;
 use tresor::storage::{Error, Storage};
 use tresor::storage::Entry;
-use std::fmt;
-use std::fmt::Formatter;
 
 const DB_NAME: &str = "tresor.db";
 
@@ -81,8 +82,8 @@ pub fn call_store(bucket: &str, key: &str, value: &str) -> Result<(), ExecError>
         Some(existing_entry) => {
             //Entry with this key already exists.
             //User must enter the password in order to overwrite the value
-            let prompt = format!("Bucket {} already contains key {} with a value. \
-                Enter the password which was used to encrypt it in order to overwrite: ", bucket, key);
+            let prompt = format!(r#"Bucket "{}" already contains key "{}" with a value. \
+                Enter the password which was used to encrypt it in order to overwrite: "#, bucket, key);
             let password = rpassword::prompt_password_stdout(&prompt).unwrap();
 
             //Failing on purpose if decryption failed
