@@ -1,5 +1,11 @@
 Command line application to securely store sensitive data
 
+# Disclaimer
+
+This application was created for self-education purposes. 
+The encryption approach chosen here could probably have been implemented better.
+In case of any suggestions or critics I appreciate you to open an issue.
+
 # Installation
 
 Tresor is written in Rust and will be published soon in crates.io.
