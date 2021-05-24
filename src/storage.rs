@@ -22,9 +22,11 @@ impl fmt::Display for Error {
 }
 
 pub trait Storage {
-    fn lookup(&self, bucket: &str, key: &str) -> Result<Option<Entry>, Error>;
-    fn store(&self, entry: Entry) -> Result<(), Error>;
-    fn delete(&self, bucket: &str, key: &str) -> Result<(), Error>;
+    fn lookup_entry(&self, bucket: &str, key: &str) -> Result<Option<Entry>, Error>;
+    fn store_entry(&self, entry: Entry) -> Result<(), Error>;
+    fn delete_entry(&self, bucket: &str, key: &str) -> Result<(), Error>;
+    fn list_buckets(&self) -> Result<Vec<String>, Error>;
+    fn list_entries(&self, bucket: &str) -> Result<Vec<Entry>, Error>;
 }
 
 #[derive(Eq, PartialEq, Debug)]
@@ -90,7 +92,7 @@ pub mod sqlite {
     }
 
     impl Entry {
-        fn from_row(row: &Row) -> Result<Entry, Error> {
+        fn from_row(row: &Row) -> Result<Entry, rusqlite::Error> {
             let bucket = row.get("bucket")?;
             let key = row.get("key")?;
             let value = row.get("value")?;
@@ -132,7 +134,7 @@ pub mod sqlite {
     }
 
     impl Storage for SqliteStorage {
-        fn lookup(&self, bucket: &str, key: &str) -> Result<Option<Entry>, Error> {
+        fn lookup_entry(&self, bucket: &str, key: &str) -> Result<Option<Entry>, Error> {
             let mut stmt = self.conn.prepare(
                 "select * from entries where bucket = ?1 and key = ?2"
             )?;
@@ -140,12 +142,12 @@ pub mod sqlite {
             let mut rows = stmt.query(params![bucket, key])?;
             let row = rows.next()?;
             match row {
-                Some(row) => Entry::from_row(row).map(Some),
+                Some(row) => Entry::from_row(row).map(Some).map_err(Error::from),
                 None => Ok(None),
             }
         }
 
-        fn store(&self, entry: Entry) -> Result<(), Error> {
+        fn store_entry(&self, entry: Entry) -> Result<(), Error> {
             let updated = self.conn.execute(
                 "insert into entries (bucket, key, value, created_on)
                  values (:bucket, :key, :value, :updated_on)
@@ -165,11 +167,35 @@ pub mod sqlite {
             }
         }
 
-        fn delete(&self, bucket: &str, key: &str) -> Result<(), Error> {
+        fn delete_entry(&self, bucket: &str, key: &str) -> Result<(), Error> {
             self.conn.execute("
                 delete from entries where bucket = ?1 and key = ?2
             ", params![bucket, key])?;
             Ok(())
+        }
+
+        fn list_buckets(&self) -> Result<Vec<String>, Error> {
+            let mut stmt = self.conn.prepare(
+                "select distinct bucket from entries order by bucket"
+            )?;
+
+            let buckets = stmt
+                .query_map([], |row| Ok(row.get(0)?))?
+                .collect::<Result<Vec<String>, rusqlite::Error>>()?;
+
+            Ok(buckets)
+        }
+
+        fn list_entries(&self, bucket: &str) -> Result<Vec<Entry>, Error> {
+            let mut stmt = self.conn.prepare(
+                "select * from entries where bucket = ?1 order by bucket"
+            )?;
+
+            let entries = stmt
+                .query_map(&[bucket], Entry::from_row)?
+                .collect::<Result<Vec<Entry>, rusqlite::Error>>()?;
+
+            Ok(entries)
         }
     }
 }

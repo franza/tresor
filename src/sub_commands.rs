@@ -73,17 +73,17 @@ impl From<storage::Error> for ExecError {
 pub fn call_store(bucket: &str, key: &str, value: &str) -> Result<(), ExecError> {
     let storage = open_storage()?;
 
-    match storage.lookup(bucket, key)? {
+    match storage.lookup_entry(bucket, key)? {
         None => {
             let password = rpassword::prompt_password_stdout("Enter password: ").unwrap();
             let encrypted_entry = encrypt_entry(&password, Entry::new(bucket, key, value))?;
-            storage.store(encrypted_entry)?;
+            storage.store_entry(encrypted_entry)?;
         }
         Some(existing_entry) => {
             //Entry with this key already exists.
             //User must enter the password in order to overwrite the value
-            let prompt = format!(r#"Bucket "{}" already contains key "{}" with a value. \
-                Enter the password which was used to encrypt it in order to overwrite: "#, bucket, key);
+            let prompt = format!("Bucket \"{}\" already contains key \"{}\" with a value. \
+                Enter the password which was used to encrypt it in order to overwrite: ", bucket, key);
             let password = rpassword::prompt_password_stdout(&prompt).unwrap();
 
             //Failing on purpose if decryption failed
@@ -92,7 +92,7 @@ pub fn call_store(bucket: &str, key: &str, value: &str) -> Result<(), ExecError>
             //Everything is okay, we ask for the password for the new value
             let password = rpassword::prompt_password_stdout("Enter new password: ").unwrap();
             let encrypted_entry = encrypt_entry(&password, Entry::new(bucket, key, value))?;
-            storage.store(encrypted_entry)?;
+            storage.store_entry(encrypted_entry)?;
         }
     };
     Ok(())
@@ -101,7 +101,7 @@ pub fn call_store(bucket: &str, key: &str, value: &str) -> Result<(), ExecError>
 // Retrieves the value from safe storage and prints
 pub fn call_get(bucket: &str, key: &str) -> Result<(), ExecError> {
     let storage = open_storage()?;
-    let entry = storage.lookup(bucket, key)?
+    let entry = storage.lookup_entry(bucket, key)?
         .ok_or(ExecError::KeyNotFound { bucket: bucket.to_string(), key: key.to_string() })?;
 
     let password = rpassword::prompt_password_stdout("Enter password: ").unwrap();
@@ -113,12 +113,46 @@ pub fn call_get(bucket: &str, key: &str) -> Result<(), ExecError> {
 // Asks for a password which was used to encrypt the value before deleting it
 pub fn call_delete(bucket: &str, key: &str) -> Result<(), ExecError> {
     let storage = open_storage()?;
-    let entry = storage.lookup(bucket, key)?
+    let entry = storage.lookup_entry(bucket, key)?
         .ok_or(ExecError::KeyNotFound { bucket: bucket.to_string(), key: key.to_string() })?;
 
     let password = rpassword::prompt_password_stdout("Enter the password \
                 which was used to encrypt this value: ").unwrap();
 
     let _ = decrypt_entry(&password, &entry)?;
-    Ok(storage.delete(bucket, key)?)
+    Ok(storage.delete_entry(bucket, key)?)
+}
+
+pub fn call_buckets_list() -> Result<(), ExecError> {
+    let storage = open_storage()?;
+    let buckets = storage.list_buckets()?;
+
+    let _: Vec<()> = buckets.into_iter()
+        .map(|b| println!("{}", b))
+        .collect();
+
+    Ok(())
+}
+
+pub fn call_entries_list(bucket: &str) -> Result<(), ExecError> {
+    let storage = open_storage()?;
+    let entries = storage.list_entries(bucket)?;
+
+    match entries.len() {
+        0 => Ok(println!("No entries found")),
+        _ => {
+            let password = rpassword::prompt_password_stdout("Enter password: ").unwrap();
+
+            let max_key_width = entries.iter().map(|e| e.key.len()).max().unwrap();
+
+            let _: Vec<()> = entries.into_iter()
+                .map(|entry| {
+                    let value = decrypt_entry(&password, &entry).unwrap_or(String::from("*****"));
+                    println!("{} | {:width$}| {}", bucket, entry.key, &value, width = max_key_width + 1);
+                })
+                .collect();
+
+            Ok(())
+        }
+    }
 }
