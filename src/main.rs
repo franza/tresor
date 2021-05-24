@@ -10,24 +10,26 @@ fn main() {
     let value_arg = Arg::with_name("value").index(3).required(true);
 
     let app = App::new("Tresor - store your stuff safely")
-        .subcommand(SubCommand::with_name("init"))
+        .subcommand(SubCommand::with_name("init")
+            .about("Initializes new safe storage"))
         .subcommand(SubCommand::with_name("store")
             .arg(bucket_arg.clone())
             .arg(key_arg.clone())
             .arg(value_arg)
-        )
+            .about("Encrypts and stores the value in tresor"))
         .subcommand(SubCommand::with_name("get")
             .arg(bucket_arg.clone())
             .arg(key_arg.clone())
-        )
+            .about("Tries to decrypt the value and outputs it"))
         .subcommand(SubCommand::with_name("delete")
             .arg(bucket_arg.clone())
             .arg(key_arg)
-        )
-        .subcommand(SubCommand::with_name("buckets"))
+            .about("Removes the value from tresor"))
+        .subcommand(SubCommand::with_name("buckets")
+            .about("Displays all created buckets"))
         .subcommand(SubCommand::with_name("keys")
             .arg(bucket_arg)
-        );
+            .about("Displays keys of bucket and their respective values and tries to decrypt them"));
 
     let matches = app.get_matches();
 
