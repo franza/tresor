@@ -1,37 +1,41 @@
+#[macro_use]
+extern crate clap;
 extern crate tresor;
-
-use clap::{App, Arg, SubCommand};
 
 mod sub_commands;
 
 fn main() {
-    let bucket_arg = Arg::with_name("bucket").index(1).required(true);
-    let key_arg = Arg::with_name("key").index(2).required(true);
-    let value_arg = Arg::with_name("value").index(3).required(true);
-
-    let app = App::new("Tresor - store your stuff safely")
-        .subcommand(SubCommand::with_name("init")
-            .about("Initializes new safe storage"))
-        .subcommand(SubCommand::with_name("store")
-            .arg(bucket_arg.clone())
-            .arg(key_arg.clone())
-            .arg(value_arg)
-            .about("Encrypts and stores the value in tresor"))
-        .subcommand(SubCommand::with_name("get")
-            .arg(bucket_arg.clone())
-            .arg(key_arg.clone())
-            .about("Tries to decrypt the value and outputs it"))
-        .subcommand(SubCommand::with_name("delete")
-            .arg(bucket_arg.clone())
-            .arg(key_arg)
-            .about("Removes the value from tresor"))
-        .subcommand(SubCommand::with_name("buckets")
-            .about("Displays all created buckets"))
-        .subcommand(SubCommand::with_name("keys")
-            .arg(bucket_arg)
-            .about("Displays keys of bucket and their respective values and tries to decrypt them"));
-
-    let matches = app.get_matches();
+    let matches = clap::clap_app!(tresor =>
+        (version: "1.0")
+        (author: "franza <franza@riseup.net>")
+        (about: "Tresor - store your stuff safely")
+        (@subcommand init =>
+            (about: "Initializes new safe storage")
+        )
+        (@subcommand store =>
+            (about: "Encrypts and stores the value in tresor")
+            (@arg bucket: +required)
+            (@arg key: +required)
+            (@arg value: +required)
+        )
+        (@subcommand get =>
+            (about: "Tries to decrypt the value and outputs it")
+            (@arg bucket: +required)
+            (@arg key: +required)
+        )
+        (@subcommand delete =>
+            (about: "Removes the value from tresor")
+            (@arg bucket: +required)
+            (@arg key: +required)
+        )
+        (@subcommand buckets =>
+            (about: "Displays all created buckets")
+        )
+        (@subcommand keys =>
+            (about: "Displays keys of bucket and their respective values and tries to decrypt them")
+            (@arg bucket: +required)
+        )
+    ).get_matches();
 
     let command_result = match matches.subcommand() {
         ("init", _) => sub_commands::call_init(),
