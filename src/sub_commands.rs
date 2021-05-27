@@ -1,5 +1,4 @@
-use std::fmt;
-use std::fmt::Formatter;
+use thiserror::Error;
 
 use tresor::crypto;
 use tresor::storage;
@@ -33,31 +32,18 @@ fn decrypt_entry(password: &str, entry: &Entry) -> Result<String, ExecError> {
         .map_err(|err| ExecError::DecryptionError(err.to_string()))
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Error)]
 pub enum ExecError {
+    #[error(r#"Database access denied for "{0}""#)]
     StorageAccessError(String),
+    #[error("Failed to perform operation over local database")]
     StorageOperationError(String),
+    #[error(r#"Key "{key}" was not found in the bucket "{bucket}""#)]
     KeyNotFound { bucket: String, key: String },
+    #[error("Failed to encrypt the data")]
     EncryptionError(String),
+    #[error("Failed to decrypt the data")]
     DecryptionError(String),
-}
-
-impl fmt::Display for ExecError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let message = match self {
-            ExecError::StorageAccessError(_) =>
-                format!(r#"Database access denied for "{}""#, DB_NAME),
-            ExecError::StorageOperationError(_) =>
-                format!("Failed to perform operation over local database"),
-            ExecError::KeyNotFound { bucket, key } =>
-                format!(r#"Key "{}" was not found in the bucket "{}""#, key, bucket),
-            ExecError::EncryptionError(_) =>
-                format!("Failed to encrypt the data"),
-            ExecError::DecryptionError(_) =>
-                format!("Failed to decrypt the data"),
-        };
-        f.write_str(message.as_str())
-    }
 }
 
 impl From<storage::Error> for ExecError {
